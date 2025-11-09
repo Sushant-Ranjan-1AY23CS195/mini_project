@@ -1,321 +1,339 @@
-# app.py — UI/UX upgraded (Full Gradient + Neon)
+# ✅ FINAL PREMIUM VERSION — Dark UI + Big Notes + Bullet Points
+# ✅ Fixed Download + Proper Educational Notes (NOT video description)
+# ✅ Fully polished for college-level project
+
 import streamlit as st
 from dotenv import load_dotenv
 load_dotenv()
 
 import os
-import io
+import uuid
+import subprocess
 import google.generativeai as genai
-from pydub import AudioSegment
 import speech_recognition as sr
-from moviepy.editor import VideoFileClip
 
-# ---------------------------
+
+# -----------------------------------------------------
 # CONFIG
-# ---------------------------
+# -----------------------------------------------------
 st.set_page_config(
-    page_title="Audio/Video → Notes + Quiz",
+    page_title="AI Notes & Quiz Generator",
     page_icon="🎧",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
-# Model name you already validated from list_models()
-MODEL_NAME = "models/gemini-2.5-flash"  # fast + supports text generation
+MODEL_NAME = "models/gemini-2.5-flash"
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# ---------------------------
-# CSS (Full Gradient + Glass + Neon)
-# ---------------------------
+
+# -----------------------------------------------------
+# ✅ DARK PREMIUM UI
+# -----------------------------------------------------
 CSS = """
 <style>
-/* Animated gradient background */
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+/* DARK BACKGROUND */
 .stApp {
-  background: linear-gradient(120deg, #0f1020, #17182c, #121826);
-  background-size: 400% 400%;
-  animation: gradientMove 18s ease infinite;
-}
-@keyframes gradientMove {
-  0% {background-position: 0% 50%;}
-  50% {background-position: 100% 50%;}
-  100% {background-position: 0% 50%;}
+    background: linear-gradient(135deg, #0b0d16, #0d1119, #090a10);
+    color: #e5e7eb;
 }
 
-/* Global typography */
-html, body, [class*="css"]  {
-  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji', 'Segoe UI Symbol';
+/* HERO BANNER */
+.hero {
+    background: url('https://images.unsplash.com/photo-1535223289827-42f1e9919769?q=80&w=1600')
+        center/cover no-repeat;
+    padding: 2.7rem;
+    border-radius: 20px;
+    box-shadow: 0px 6px 30px rgba(0,0,0,0.45);
+    position: relative;
+}
+.hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    border-radius: 20px;
+}
+.hero h1, .hero p {
+    position: relative;
+    z-index: 2;
+}
+.hero h1 {
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #f9fafb;
+}
+.hero p {
+    color: #d1d5db;
+    font-size: 1.15rem;
 }
 
-/* App title gradient text */
-.gradient-title {
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  background: linear-gradient(90deg, #8b5cf6, #22d3ee, #22c55e);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 10px rgba(139,92,246,0.25));
+/* GLASS CARD */
+.card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 1.6rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    transition: 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.45);
 }
 
-/* Glass card containers */
-.glass {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03);
-  backdrop-filter: blur(12px);
-  border-radius: 18px;
-  padding: 1.1rem 1.2rem;
+/* SECTION TITLE */
+.section-title {
+    background: linear-gradient(90deg, #6366f1, #22d3ee);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 1.2rem;
 }
 
-/* Subhead */
-.subhead {
-  color: #d1d5db;
-  font-size: 0.98rem;
-  margin-top: -6px;
-}
-
-/* Neon primary buttons */
+/* BUTTON */
 .stButton > button {
-  border-radius: 12px !important;
-  padding: 0.7rem 1.1rem !important;
-  font-weight: 700 !important;
-  letter-spacing: .3px !important;
-  border: 1px solid rgba(34,211,238,.45) !important;
-  background: radial-gradient(120% 120% at 50% 120%, rgba(34,211,238,.25) 0%, rgba(34,211,238,.08) 45%, rgba(34,211,238,.02) 100%);
-  color: #e6fbff !important;
-  box-shadow: 0 0 20px rgba(34,211,238,.22), inset 0 0 8px rgba(34,211,238,.18);
-  transition: transform .08s ease, box-shadow .15s ease, border-color .15s ease;
+    background: linear-gradient(90deg, #3b82f6, #06b6d4);
+    border: none;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    color: white !important;
+    font-weight: 700;
+    transition: 0.15s;
 }
 .stButton > button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 28px rgba(34,211,238,.35), inset 0 0 10px rgba(34,211,238,.22);
-  border-color: rgba(34,211,238,.8) !important;
+    background: linear-gradient(90deg, #2563eb, #0ea5e9);
+    transform: scale(1.03);
 }
 
-/* Secondary pills */
-.pill {
-  display: inline-block;
-  padding: .35rem .6rem;
-  border-radius: 999px;
-  font-size: .78rem;
-  border: 1px solid rgba(148,163,184,.35);
-  color: #cbd5e1;
-  background: rgba(30,41,59,.45);
+/* OUTPUT BOX — BIG FONT */
+.output-box {
+    background: rgba(255,255,255,0.08);
+    border-left: 6px solid #60a5fa;
+    border-radius: 14px;
+    padding: 1.6rem 1.7rem;
+    color: #f9fafb;
+    font-size: 1.25rem;
+    line-height: 1.85rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
 }
 
-/* Expander styling */
-.streamlit-expanderHeader {
-  font-weight: 700 !important;
-  letter-spacing: .3px;
+.output-box ul {
+    padding-left: 1.2rem;
 }
-.streamlit-expanderHeader:hover {
-  filter: drop-shadow(0 0 8px rgba(34,211,238,.25));
+.output-box li {
+    margin-bottom: 0.7rem;
 }
 
-/* Markdown output card style */
-.output-card {
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(148,163,184,.25);
-  border-radius: 14px;
-  padding: 1rem 1.1rem;
-  color: #e5e7eb;
+/* IMAGE */
+.output-image {
+    width: 100%;
+    border-radius: 16px;
+    margin-bottom: 1rem;
 }
 
-/* Sidebar styling */
-section[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, rgba(15,16,32,.95), rgba(17,24,39,.95));
-  border-right: 1px solid rgba(148,163,184,.12);
-}
-.sidebar-title {
-  font-weight: 800;
-  font-size: 1.2rem;
-  background: linear-gradient(90deg, #22d3ee, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.sidebar-small {
-  color: #a3a3a3; font-size: .86rem;
-}
+/* FOOTER */
 .footer {
-  opacity: .75; font-size: .82rem; color: #9ca3af; text-align:center; padding-top: .7rem;
+    text-align:center;
+    padding:1rem;
+    font-size:0.9rem;
+    color:#9ca3af;
 }
+
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
-# ---------------------------
-# Helpers (same logic)
-# ---------------------------
+
+
+# -----------------------------------------------------
+# ✅ Audio Extraction (FFmpeg)
+# -----------------------------------------------------
 def video_to_audio(video_path: str) -> str:
-    audio_path = "temp_audio.wav"
-    clip = VideoFileClip(video_path)
-    clip.audio.write_audiofile(audio_path, verbose=False, logger=None)
-    clip.close()
-    return audio_path
+    out_wav = f"temp_{uuid.uuid4()}.wav"
+    cmd = [
+        "ffmpeg", "-y", "-i", video_path,
+        "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le",
+        out_wav
+    ]
+    subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return out_wav
 
-def audio_to_text(audio_path: str) -> str:
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(audio_path) as source:
-        audio_data = recognizer.record(source)
-    return recognizer.recognize_google(audio_data)
 
-def generate_notes(text: str) -> str:
+# -----------------------------------------------------
+# ✅ Speech Recognition
+# -----------------------------------------------------
+def audio_to_text(audio_path):
+    rec = sr.Recognizer()
+    with sr.AudioFile(audio_path) as src:
+        data = rec.record(src)
+    return rec.recognize_google(data)
+
+
+# -----------------------------------------------------
+# ✅ Educational Notes (not video description)
+# -----------------------------------------------------
+def generate_notes(text):
     model = genai.GenerativeModel(MODEL_NAME)
-    prompt = f"""
-You are a world-class note-maker. Summarize the following content in clean bullet points.
-Keep it concise, logically grouped, and practical. Focus on key facts, definitions, steps, and outcomes.
 
-Text:
-{text}
-"""
-    resp = model.generate_content(prompt)
-    return resp.text if hasattr(resp, "text") else str(resp)
+    prompt = """
+You are an expert teacher. The text below is a spoken lecture.
 
-def generate_quiz(text: str) -> str:
+✅ Create meaningful, readable, student-friendly NOTES.
+✅ DO NOT describe what is happening in the video.
+✅ DO NOT narrate actions.
+✅ Write ONLY the concepts, definitions, explanations, steps, examples.
+✅ Make it perfect for studying.
+
+Format:
+- Clear bullet points
+- Definitions
+- Explanations
+- Concepts
+- Key ideas
+- Important notes
+
+Lecture content:
+""" + text
+
+    return model.generate_content(prompt).text
+
+
+# -----------------------------------------------------
+# ✅ Quiz Generator
+# -----------------------------------------------------
+def generate_quiz(text):
     model = genai.GenerativeModel(MODEL_NAME)
-    prompt = f"""
-Create a 5-question quiz from this content. Mix formats:
-- 3 multiple-choice (4 options each, mark the correct one)
-- 1 short-answer
-- 1 true/false
-Keep questions unambiguous and practical.
+    prompt = """
+Create:
+✅ 3 MCQs (4 options each)
+✅ 1 short answer
+✅ 1 true/false
+""" + text
+    return model.generate_content(prompt).text
 
-Content:
-{text}
-"""
-    resp = model.generate_content(prompt)
-    return resp.text if hasattr(resp, "text") else str(resp)
 
-def _bytes_from_str(s: str) -> bytes:
-    return s.encode("utf-8") if s else b""
 
-# ---------------------------
-# SIDEBAR (Navigation/Meta)
-# ---------------------------
-with st.sidebar:
-    st.markdown('<div class="sidebar-title">🎧 Notes + Quiz Generator</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-small">Audio/Video → Speech-to-Text → Notes & Quiz</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    key_ok = bool(os.getenv("GOOGLE_API_KEY"))
-    st.markdown(f"**Gemini Model**: <span class='pill'>{MODEL_NAME}</span>", unsafe_allow_html=True)
-    st.markdown(f"**API Key**: <span class='pill' style='color:{'#22c55e' if key_ok else '#ef4444'}'>{'Loaded' if key_ok else 'Missing'}</span>", unsafe_allow_html=True)
-    st.markdown("---")
-    st.caption("Tip: Larger videos take longer. Prefer shorter clips for quick tests.")
-
-# ---------------------------
-# HEADER
-# ---------------------------
-st.markdown(
-    """
-    <div class="glass">
-      <div class="gradient-title">🎙️ Audio / 🎥 Video → Notes + Quiz</div>
-      <div class="subhead">Upload a file, we auto-transcribe it, then generate clean notes and a ready-to-use quiz.</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# -----------------------------------------------------
+# ✅ HERO HEADER
+# -----------------------------------------------------
+st.markdown("""
+<div class='hero'>
+    <h1>🎧 AI Notes & Quiz Generator</h1>
+    <p>Upload any lecture — AI transcribes and creates smart, study-ready notes + quizzes.</p>
+</div>
+""", unsafe_allow_html=True)
 st.write("")
 
-# ---------------------------
-# MAIN LAYOUT
-# ---------------------------
-col_left, col_right = st.columns([1.15, 1])
 
-with col_left:
-    st.markdown('<div class="glass">', unsafe_allow_html=True)
-    st.markdown("#### Upload")
+# -----------------------------------------------------
+# MAIN UI
+# -----------------------------------------------------
+left, right = st.columns([1.1, 1])
+
+with left:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📤 Upload Your File</div>", unsafe_allow_html=True)
+
     uploaded = st.file_uploader(
-        "Supported formats: MP3, WAV, MP4, MKV, MOV",
-        type=["mp3", "wav", "mp4", "mkv", "mov"],
-        help="For videos we’ll first extract audio automatically."
+        "Supported: MP3 • WAV • MP4 • MKV • MOV",
+        type=["mp3", "wav", "mp4", "mkv", "mov"]
     )
-    run_btn = st.button("⚡ Generate Notes & Quiz", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    run = st.button("⚡ Generate Notes & Quiz", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with col_right:
-    st.markdown('<div class="glass">', unsafe_allow_html=True)
-    st.markdown("#### Status")
-    st.markdown(
-        """
-        <div class="output-card">
-          <b>Pipeline</b><br>
-          1) File → (Video→Audio if needed)<br>
-          2) Speech-to-Text<br>
-          3) Gemini Notes & Quiz
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------------------
+with right:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🚀 Process Flow</div>", unsafe_allow_html=True)
+    st.write("✅ Upload → ✅ Extract → ✅ Transcribe → ✅ Notes → ✅ Quiz")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# -----------------------------------------------------
 # PROCESSING
-# ---------------------------
-if run_btn:
+# -----------------------------------------------------
+if run:
     if not uploaded:
-        st.warning("Upload a file first.")
+        st.warning("Please upload a file.")
     else:
         try:
-            # Save temp file
-            ext = uploaded.name.split(".")[-1].lower()
-            temp_path = f"uploaded_temp.{ext}"
-            with open(temp_path, "wb") as f:
+            ext = uploaded.name.split(".")[-1]
+            temp = f"temp.{ext}"
+            with open(temp, "wb") as f:
                 f.write(uploaded.getbuffer())
 
-            # Video → Audio (if needed)
-            if ext in ("mp4", "mkv", "mov"):
-                with st.spinner("🎬 Extracting audio from video..."):
-                    audio_path = video_to_audio(temp_path)
+            # ✅ Extract audio if video
+            if ext in ["mp4", "mkv", "mov"]:
+                with st.spinner("🎬 Extracting audio..."):
+                    audio = video_to_audio(temp)
             else:
-                audio_path = temp_path
+                audio = temp
 
-            # Audio → Text
-            with st.spinner("🎧 Converting audio to text..."):
-                text_data = audio_to_text(audio_path)
+            # ✅ Convert audio to text
+            with st.spinner("🎧 Transcribing..."):
+                text_data = audio_to_text(audio)
 
-            # Notes
-            with st.spinner("📝 Generating Notes..."):
+            # ✅ Generate notes
+            with st.spinner("📝 Generating study notes..."):
                 notes = generate_notes(text_data)
 
-            # Quiz
-            with st.spinner("🧠 Generating Quiz..."):
+            # ✅ Generate quiz
+            with st.spinner("🧠 Creating quiz..."):
                 quiz = generate_quiz(text_data)
 
-            # ---------------------------
-            # OUTPUT UI
-            # ---------------------------
-            st.markdown("")
-            st.markdown('<div class="glass">', unsafe_allow_html=True)
-            with st.expander("✅ Generated Notes", expanded=True):
-                st.markdown(f"<div class='output-card'>{notes}</div>", unsafe_allow_html=True)
-                st.download_button(
-                    "⬇️ Download Notes (.txt)",
-                    data=_bytes_from_str(notes),
-                    file_name="notes.txt",
-                    mime="text/plain",
-                    use_container_width=True,
-                )
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.success("✅ Completed!")
 
-            st.markdown('<div class="glass">', unsafe_allow_html=True)
-            with st.expander("✅ Generated Quiz", expanded=True):
-                st.markdown(f"<div class='output-card'>{quiz}</div>", unsafe_allow_html=True)
-                st.download_button(
-                    "⬇️ Download Quiz (.txt)",
-                    data=_bytes_from_str(quiz),
-                    file_name="quiz.txt",
-                    mime="text/plain",
-                    use_container_width=True,
-                )
-            st.markdown('</div>', unsafe_allow_html=True)
+            # -----------------------------------------------------
+            # ✅ FORMAT BULLET POINTS
+            # -----------------------------------------------------
+            def html_list_format(text):
+                text = text.replace("•", "<li>").replace("-", "<li>")
+                return "<ul>" + text + "</ul>"
+
+            formatted_notes = html_list_format(notes)
+            formatted_quiz = html_list_format(quiz)
+
+            # -----------------------------------------------------
+            # ✅ CLEAN VERSION FOR DOWNLOAD
+            # -----------------------------------------------------
+            clean_notes = notes.replace("•", "- ").replace("<li>", "- ")
+            clean_quiz = quiz.replace("•", "- ").replace("<li>", "- ")
+
+            # -----------------------------------------------------
+            # ✅ DISPLAY NOTES
+            # -----------------------------------------------------
+            st.markdown("## 📄 Study Notes")
+            st.image(
+                "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200",
+                use_column_width=True
+            )
+            st.markdown(f"<div class='output-box'>{formatted_notes}</div>", unsafe_allow_html=True)
+            st.download_button("⬇️ Download Notes", clean_notes, "notes.txt")
+
+            # -----------------------------------------------------
+            # ✅ DISPLAY QUIZ
+            # -----------------------------------------------------
+            st.markdown("## 🧠 Quiz")
+            st.image(
+                "https://images.unsplash.com/photo-1553877522-43269d4ea984?q=80&w=1400",
+                use_column_width=True
+            )
+            st.markdown(f"<div class='output-box'>{formatted_quiz}</div>", unsafe_allow_html=True)
+            st.download_button("⬇️ Download Quiz", clean_quiz, "quiz.txt")
 
         except Exception as e:
             st.error(f"Error: {e}")
 
-# ---------------------------
+
+# -----------------------------------------------------
 # FOOTER
-# ---------------------------
-st.markdown(
-    "<div class='footer'>Built for fast prototyping • Gradient Neon UI • Streamlit</div>",
-    unsafe_allow_html=True
-)
+# -----------------------------------------------------
+st.markdown("<div class='footer'>Built with ❤️ | Premium AI | Study Notes Engine</div>", unsafe_allow_html=True)
